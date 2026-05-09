@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import extension, { buildCacheKey, buildFetchSchema, buildSearchSchema, fetchWithCache, pageSlice } from "../extensions/pi-web-kit/index.ts";
+import extension, { buildCacheKey, buildFetchSchema, buildSearchSchema, fetchWithCache, pageSlice } from "../extensions/index.ts";
 
 const propNames = (schema) => Object.keys(schema.properties ?? {}).sort();
 

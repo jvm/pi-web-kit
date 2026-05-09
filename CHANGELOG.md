@@ -6,6 +6,12 @@ This project follows the spirit of [Keep a Changelog](https://keepachangelog.com
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-05-09
+
+### Fixed
+
+- Show the Pi extension as `pi-web-kit` instead of `pi-web-kit:pi-web-kit` in the startup extensions list.
+
 ## [0.1.0] - 2026-05-09
 
 ### Added

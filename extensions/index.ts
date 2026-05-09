@@ -1,13 +1,13 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
-import { fetchCache, type CachedPage } from "../../src/cache.js";
-import { resolveConfig } from "../../src/config.js";
-import { DEFAULT_FETCH_LIMIT, DEFAULT_NUM_RESULTS, MAX_LIMIT, MAX_NUM_RESULTS, MAX_OFFSET, MAX_QUERY_COUNT, MAX_URL_COUNT, MULTI_FETCH_LIMIT } from "../../src/limits.js";
-import { truncateText } from "../../src/http.js";
-import { createFetchProvider, createSearchProvider } from "../../src/providers/index.js";
-import type { FetchProviderName, SearchProviderName, WebFetchResult } from "../../src/types.js";
-import { canonicalWebUrl, normalizeUrlInput, urlsMatch } from "../../src/urls.js";
+import { fetchCache, type CachedPage } from "../src/cache.js";
+import { resolveConfig } from "../src/config.js";
+import { DEFAULT_FETCH_LIMIT, DEFAULT_NUM_RESULTS, MAX_LIMIT, MAX_NUM_RESULTS, MAX_OFFSET, MAX_QUERY_COUNT, MAX_URL_COUNT, MULTI_FETCH_LIMIT } from "../src/limits.js";
+import { truncateText } from "../src/http.js";
+import { createFetchProvider, createSearchProvider } from "../src/providers/index.js";
+import type { FetchProviderName, SearchProviderName, WebFetchResult } from "../src/types.js";
+import { canonicalWebUrl, normalizeUrlInput, urlsMatch } from "../src/urls.js";
 
 export default function (pi: ExtensionAPI) {
   pi.registerFlag("web-provider-search", {

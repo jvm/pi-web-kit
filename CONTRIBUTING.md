@@ -43,7 +43,7 @@ Before opening a pull request:
 
 ## Coding guidelines
 
-- Keep `extensions/pi-web-kit/index.ts` focused on Pi tool registration and move reusable implementation details into `src/`.
+- Keep `extensions/index.ts` focused on Pi tool registration and move reusable implementation details into `src/`.
 - When changing tool parameters, update the Typebox schema, runtime validation, README parameter docs, and tests together.
 - Treat provider names, config keys, env vars, and cache semantics as public interface; changes to defaults or precedence are breaking changes.
 - Validate and normalize external URLs before provider calls.

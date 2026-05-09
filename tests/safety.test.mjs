@@ -5,7 +5,7 @@ import { fetchWithTimeout, mapConcurrent, normalizeUrls } from "../src/http.ts";
 import { ExaProvider } from "../src/providers/exa.ts";
 import { FirecrawlProvider } from "../src/providers/firecrawl.ts";
 import { MarkdownNewProvider } from "../src/providers/markdown-new.ts";
-import { fetchWithCache } from "../extensions/pi-web-kit/index.ts";
+import { fetchWithCache } from "../extensions/index.ts";
 
 const cfg = (apiKeys = {}) => ({ provider_search: "exa_mcp", provider_fetch: "exa_mcp", apiKeys, markdownNew: { method: "auto", retainImages: false } });
 
