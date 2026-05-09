@@ -85,9 +85,27 @@ test("web_search rejects query and numResults limits", async () => {
   await assert.rejects(() => searchTool.execute("id", { query: "a", numResults: 21 }, undefined, undefined, { cwd }), /numResults/);
 });
 
-test("web_fetch rejects offset/limit with multiple URLs", async () => {
+test("web_fetch rejects offset with multiple URLs", async () => {
   const fetchTool = registerWithFlags({}).find((t) => t.name === "web_fetch");
-  await assert.rejects(() => fetchTool.execute("id", { urls: ["https://a.test", "https://b.test"], offset: 1 }, undefined, undefined, { cwd: mkdtempSync(join(tmpdir(), "pi-web-kit-")) }), /single url/);
+  await assert.rejects(() => fetchTool.execute("id", { urls: ["https://a.test", "https://b.test"], offset: 1 }, undefined, undefined, { cwd: mkdtempSync(join(tmpdir(), "pi-web-kit-")) }), /offset range reads require a single url/);
+});
+
+test("web_fetch allows limit with multiple URLs", async () => {
+  const fetchTool = registerWithFlags({ "web-provider-fetch": "markdown_new" }).find((t) => t.name === "web_fetch");
+  const oldFetch = globalThis.fetch;
+  globalThis.fetch = async (_url, init) => {
+    const body = JSON.parse(init.body);
+    return new Response(`content for ${body.url}`, { status: 200, headers: { "content-type": "text/markdown" } });
+  };
+  try {
+    const out = await fetchTool.execute("id", { urls: ["https://limit-a.test", "https://limit-b.test"], limit: 7 }, undefined, undefined, { cwd: mkdtempSync(join(tmpdir(), "pi-web-kit-")) });
+    const parsed = JSON.parse(out.content[0].text);
+    assert.equal(parsed.results.length, 2);
+    assert.deepEqual(parsed.results.map((r) => r.content), ["content", "content"]);
+    assert.deepEqual(parsed.results.map((r) => r.range.limit), [7, 7]);
+  } finally {
+    globalThis.fetch = oldFetch;
+  }
 });
 
 test("web_fetch rejects invalid range params", async () => {
