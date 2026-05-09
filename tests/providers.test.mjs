@@ -59,3 +59,53 @@ test("config-file API keys override environment for all keyed providers", () => 
   assert.equal(cfg.apiKeys.brave, "file-brave");
   assert.equal(cfg.apiKeys.firecrawl, "file-fire");
 });
+
+test("Exa fetch falls back to TinyFish first when no crawl results are returned", async () => {
+  const calls = [];
+  const oldFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    calls.push(String(url));
+    if (String(url).includes("api.exa.ai/contents")) {
+      return new Response(JSON.stringify({ results: [] }), { status: 200, headers: { "content-type": "application/json" } });
+    }
+    if (String(url).includes("api.fetch.tinyfish.ai")) {
+      assert.equal(init.headers["X-API-Key"], "tiny-key");
+      return new Response(JSON.stringify({ results: [{ url: "https://example.com", title: "Fallback", markdown: "fallback content" }] }), { status: 200, headers: { "content-type": "application/json" } });
+    }
+    throw new Error(`unexpected fetch ${url}`);
+  };
+  try {
+    const provider = new ExaProvider(cfg({ exa: "exa-key", tinyfish: "tiny-key", firecrawl: "fire-key" }));
+    const result = await provider.fetch({ url: "https://example.com" });
+    assert.equal(result.provider, "exa");
+    assert.equal(result.results[0].content, "fallback content");
+    assert.equal(result.results[0].metadata.fallbackProvider, "tinyfish");
+    assert.deepEqual(calls, ["https://api.exa.ai/contents", "https://api.fetch.tinyfish.ai"]);
+  } finally {
+    globalThis.fetch = oldFetch;
+  }
+});
+
+test("Exa fetch skips unavailable keyed fallbacks and uses markdown.new", async () => {
+  const calls = [];
+  const oldFetch = globalThis.fetch;
+  globalThis.fetch = async (url) => {
+    calls.push(String(url));
+    if (String(url).includes("api.exa.ai/contents")) {
+      return new Response(JSON.stringify({ results: [{ url: "https://example.com", text: "No crawl results found" }] }), { status: 200, headers: { "content-type": "application/json" } });
+    }
+    if (String(url) === "https://markdown.new/") {
+      return new Response("markdown.new content", { status: 200, headers: { "content-type": "text/markdown" } });
+    }
+    throw new Error(`unexpected fetch ${url}`);
+  };
+  try {
+    const provider = new ExaProvider(cfg({ exa: "exa-key" }));
+    const result = await provider.fetch({ url: "https://example.com" });
+    assert.equal(result.results[0].content, "markdown.new content");
+    assert.equal(result.results[0].metadata.fallbackProvider, "markdown_new");
+    assert.deepEqual(calls, ["https://api.exa.ai/contents", "https://markdown.new/"]);
+  } finally {
+    globalThis.fetch = oldFetch;
+  }
+});

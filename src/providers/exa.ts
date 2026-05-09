@@ -2,10 +2,11 @@ import { asSnippet, normalizeUrls, requestJson } from "../http.js";
 import { urlsMatch } from "../urls.js";
 import type { FetchInput, FetchProvider, SearchInput, SearchProvider, WebFetchResult, WebKitConfig } from "../types.js";
 import { requireKey } from "../config.js";
+import { applyExaFetchFallbacks } from "./fallback.js";
 
 export class ExaProvider implements SearchProvider, FetchProvider {
   private key: string;
-  constructor(config: WebKitConfig) { this.key = requireKey(config, "exa"); }
+  constructor(private config: WebKitConfig) { this.key = requireKey(config, "exa"); }
 
   async search(input: SearchInput, signal?: AbortSignal) {
     const body = {
@@ -52,10 +53,11 @@ export class ExaProvider implements SearchProvider, FetchProvider {
       timeoutMs: 45000,
     });
     const list = data.results ?? [];
-    return { provider: "exa", results: urls.map((url, i) => {
+    const primary: WebFetchResult = { provider: "exa", results: urls.map((url, i) => {
       const r: any = list.find((item: any) => urlsMatch(item.url, url)) ?? list[i];
       if (!r) return { url, error: "No content returned by Exa contents endpoint." };
       return { url: r.url ?? url, title: r.title, content: r.text ?? r.summary ?? "", format: "markdown" as const, metadata: r };
     }) };
+    return applyExaFetchFallbacks(this.config, input, urls, primary, signal);
   }
 }

@@ -1,6 +1,7 @@
 import { asSnippet, fetchWithTimeout, normalizeUrls } from "../http.js";
 import { urlsMatch } from "../urls.js";
 import type { FetchInput, FetchProvider, SearchInput, SearchProvider, WebKitConfig } from "../types.js";
+import { applyExaFetchFallbacks } from "./fallback.js";
 
 let nextId = 1;
 
@@ -17,7 +18,7 @@ export class ExaMcpProvider implements SearchProvider, FetchProvider {
     const urls = normalizeUrls(input);
     const result = await this.callTool("web_fetch_exa", { urls }, signal);
     const pages = normalizeFetch(result, urls);
-    return { provider: "exa_mcp" as const, results: pages };
+    return applyExaFetchFallbacks(this.config, input, urls, { provider: "exa_mcp" as const, results: pages }, signal);
   }
 
   private async callTool(name: string, args: Record<string, unknown>, signal?: AbortSignal): Promise<any> {
