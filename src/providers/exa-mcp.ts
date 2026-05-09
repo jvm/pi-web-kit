@@ -1,4 +1,5 @@
-import { asSnippet, normalizeUrls, requestJson } from "../http.js";
+import { asSnippet, fetchWithTimeout, normalizeUrls } from "../http.js";
+import { urlsMatch } from "../urls.js";
 import type { FetchInput, FetchProvider, SearchInput, SearchProvider, WebKitConfig } from "../types.js";
 
 let nextId = 1;
@@ -27,7 +28,8 @@ export class ExaMcpProvider implements SearchProvider, FetchProvider {
   private async initialize(signal?: AbortSignal) {
     if (this.sessionId) return;
     const data = await this.rpcRaw("initialize", { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "pi-web-kit", version: "0.1.0" } }, signal);
-    this.sessionId = data.sessionId;
+    this.sessionId = data.sessionId ?? data.payload?.sessionId;
+    if (!this.sessionId) throw new Error("Exa MCP initialize did not return an mcp-session-id response header.");
     await this.rpcRaw("notifications/initialized", undefined, signal, true);
   }
 
@@ -42,7 +44,7 @@ export class ExaMcpProvider implements SearchProvider, FetchProvider {
     if (this.sessionId) headers["mcp-session-id"] = this.sessionId;
     if (this.config.apiKeys.exa) headers["x-api-key"] = this.config.apiKeys.exa;
     const body = notification ? { jsonrpc: "2.0", method, params } : { jsonrpc: "2.0", id: nextId++, method, params };
-    const res = await fetch("https://mcp.exa.ai/mcp", { method: "POST", headers, body: JSON.stringify(body), signal });
+    const res = await fetchWithTimeout("https://mcp.exa.ai/mcp", { method: "POST", headers, body: JSON.stringify(body), signal, timeoutMs: 45_000 });
     const text = await res.text();
     if (!res.ok) throw new Error(`Exa MCP ${method} failed: ${res.status} ${res.statusText}: ${text.slice(0, 1000)}`);
     if (notification) return { sessionId: this.sessionId };
@@ -80,7 +82,7 @@ function normalizeFetch(result: any, urls: string[]) {
   const structured = result?.structuredContent ?? result?.result ?? result;
   const list = structured.results ?? structured.data ?? structured.pages;
   if (Array.isArray(list)) return urls.map((url, i) => {
-    const r = list.find((x: any) => x.url === url) ?? list[i];
+    const r = list.find((x: any) => urlsMatch(x.url, url)) ?? list[i];
     return r ? { url, title: r.title, content: r.markdown ?? r.text ?? r.content ?? r.html, format: "markdown" as const, metadata: r, error: r.error } : { url, error: "No content returned by Exa MCP." };
   });
   const text = textFromContent(result);

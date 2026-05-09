@@ -1,4 +1,5 @@
 import { asSnippet, normalizeUrls, requestJson } from "../http.js";
+import { urlsMatch } from "../urls.js";
 import type { FetchInput, FetchProvider, SearchInput, SearchProvider, WebFetchResult, WebKitConfig } from "../types.js";
 import { requireKey } from "../config.js";
 
@@ -50,11 +51,11 @@ export class ExaProvider implements SearchProvider, FetchProvider {
       signal,
       timeoutMs: 45000,
     });
-    const byUrl = new Map((data.results ?? []).map((r: any) => [r.url, r]));
-    return { provider: "exa", results: urls.map((url) => {
-      const r: any = byUrl.get(url);
+    const list = data.results ?? [];
+    return { provider: "exa", results: urls.map((url, i) => {
+      const r: any = list.find((item: any) => urlsMatch(item.url, url)) ?? list[i];
       if (!r) return { url, error: "No content returned by Exa contents endpoint." };
-      return { url, title: r.title, content: r.text ?? r.summary ?? "", format: "markdown" as const, metadata: r };
+      return { url: r.url ?? url, title: r.title, content: r.text ?? r.summary ?? "", format: "markdown" as const, metadata: r };
     }) };
   }
 }

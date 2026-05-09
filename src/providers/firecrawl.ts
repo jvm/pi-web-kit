@@ -1,4 +1,5 @@
-import { asSnippet, normalizeUrls, requestJson } from "../http.js";
+import { asSnippet, mapConcurrent, normalizeUrls, requestJson } from "../http.js";
+import { FETCH_CONCURRENCY } from "../limits.js";
 import type { FetchInput, FetchProvider, SearchInput, SearchProvider, WebKitConfig } from "../types.js";
 import { requireKey } from "../config.js";
 
@@ -19,7 +20,7 @@ export class FirecrawlProvider implements SearchProvider, FetchProvider {
         excludeDomains: input.excludeDomains,
         categories: input.categories,
         tbs: input.tbs,
-        scrapeOptions: input.scrape === true ? { formats: [{ type: "markdown" }] } : undefined,
+        scrapeOptions: input.scrapeOptions ?? (input.scrape === true ? { formats: ["markdown"] } : undefined),
       }),
     });
     const list = data.data?.web ?? data.web ?? data.data ?? [];
@@ -30,9 +31,10 @@ export class FirecrawlProvider implements SearchProvider, FetchProvider {
 
   async fetch(input: FetchInput, signal?: AbortSignal) {
     const urls = normalizeUrls(input);
-    const results = await Promise.all(urls.map(async (url) => {
+    const results = await mapConcurrent(urls, FETCH_CONCURRENCY, async (url) => {
       try {
-        const formats: any[] = Array.isArray(input.formats) ? input.formats : [{ type: "markdown" }];
+        const format = input.format ?? "markdown";
+        const formats = [format];
         const data = await requestJson<any>("https://api.firecrawl.dev/v2/scrape", {
           method: "POST", headers: this.headers(), signal, timeoutMs: 90000,
           body: JSON.stringify({
@@ -46,11 +48,13 @@ export class FirecrawlProvider implements SearchProvider, FetchProvider {
           }),
         });
         const d = data.data ?? data;
-        return { url, content: d.markdown ?? d.html ?? (d.json ? JSON.stringify(d.json, null, 2) : undefined), format: input.format ?? "markdown", title: d.metadata?.title, metadata: d.metadata ?? d };
+        const selected = format === "html" ? d.html : format === "json" ? d.json : d.markdown;
+        const content = typeof selected === "string" ? selected : selected == null ? undefined : JSON.stringify(selected, null, 2);
+        return { url: d.url ?? url, content, format, title: d.metadata?.title, metadata: d.metadata ?? d };
       } catch (e) {
         return { url, error: e instanceof Error ? e.message : String(e) };
       }
-    }));
+    });
     return { provider: "firecrawl" as const, results };
   }
 }

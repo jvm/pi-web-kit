@@ -32,7 +32,8 @@ export class TinyFishProvider implements SearchProvider, FetchProvider {
     return { provider: "tinyfish" as const, results: urls.map((url, i) => {
       const r = list.find((x: any) => (x.url ?? x.source_url) === url) ?? list[i];
       if (!r) return { url, error: "No content returned by TinyFish." };
-      return { url, content: r.content ?? r.markdown ?? r.html ?? r.text, format: input.format ?? "markdown", title: r.title, metadata: r, error: r.error };
+      const content = r.text ?? r.content ?? r.markdown ?? r.html;
+      return { url, content: typeof content === "string" ? content : JSON.stringify(content, null, 2), format: input.format ?? r.format ?? "markdown", title: r.title, metadata: r, error: r.error };
     }) };
   }
 }

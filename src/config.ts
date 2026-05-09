@@ -28,13 +28,16 @@ export function resolveConfig(flags: { providerSearch?: unknown; providerFetch?:
       firecrawl: env.FIRECRAWL_API_KEY,
     },
   });
-  for (const path of [join(cwd, ".pi-web-kit.json"), join(homedir(), ".pi/agent/pi-web-kit.json")]) {
+  const home = env.HOME ?? homedir();
+  for (const path of [join(home, ".pi/agent/pi-web-kit.json"), join(cwd, ".pi-web-kit.json")]) {
     if (existsSync(path)) cfg = merge(cfg, JSON.parse(readFileSync(path, "utf8")) as PartialConfig);
   }
   cfg = merge(cfg, {
     provider_search: flags.providerSearch as SearchProviderName | undefined,
     provider_fetch: flags.providerFetch as FetchProviderName | undefined,
   });
+  validateSearchProvider(cfg.provider_search);
+  validateFetchProvider(cfg.provider_fetch);
   return cfg;
 }
 

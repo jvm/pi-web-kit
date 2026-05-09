@@ -25,11 +25,11 @@ Defaults: `provider_search = "exa_mcp"`, `provider_fetch = "exa_mcp"`.
 | `firecrawl` | yes | yes | `FIRECRAWL_API_KEY` |
 | `markdown_new` | no | yes | none |
 
-Tool schemas are tailored to the configured providers at startup/reload, so only supported provider-specific fields are exposed.
+Tool schemas are tailored to the configured providers at startup/reload, so only supported provider-specific fields are exposed. Restart/reload pi after changing provider config.
 
 ## Configuration
 
-Resolution order: defaults < environment variables < config file < CLI flags.
+Resolution order: defaults < environment variables < global config < project config < CLI flags.
 
 ```bash
 PI_WEB_KIT_PROVIDER_SEARCH=exa_mcp|exa|tinyfish|brave|firecrawl
@@ -40,10 +40,10 @@ BRAVE_SEARCH_API_KEY=...
 FIRECRAWL_API_KEY=...
 ```
 
-Config files:
+Config files, in increasing precedence:
 
-1. `.pi-web-kit.json`
-2. `~/.pi/agent/pi-web-kit.json`
+1. `~/.pi/agent/pi-web-kit.json` (global)
+2. `.pi-web-kit.json` (project)
 
 ```json
 {
@@ -70,7 +70,7 @@ pi -e . --web-provider-search firecrawl --web-provider-fetch markdown_new --prin
 ## Tools
 
 - `web_search`: accepts `query` or `queries`, plus active-provider fields.
-- `web_fetch`: accepts `url` or `urls`; caches by URL and supports `offset`, `limit`, and `refresh` for long pages.
+- `web_fetch`: accepts `url` or `urls`; caches by canonical URL plus fetch-affecting options in memory; supports `offset` / `limit` chunk reads for single URLs; `refresh` refetches and replaces the cache entry.
 
 ## Development
 
