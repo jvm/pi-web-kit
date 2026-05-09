@@ -1,4 +1,5 @@
 import { asSnippet, normalizeUrls, requestJson } from "../http.js";
+import { DEFAULT_NUM_RESULTS } from "../limits.js";
 import { urlsMatch } from "../urls.js";
 import type { FetchInput, FetchProvider, SearchInput, SearchProvider, WebFetchResult, WebKitConfig } from "../types.js";
 import { requireKey } from "../config.js";
@@ -11,7 +12,7 @@ export class ExaProvider implements SearchProvider, FetchProvider {
   async search(input: SearchInput, signal?: AbortSignal) {
     const body = {
       query: input.query,
-      numResults: input.numResults ?? 10,
+      numResults: input.numResults ?? DEFAULT_NUM_RESULTS,
       contents: input.contents ?? { highlights: true },
       includeDomains: input.includeDomains,
       excludeDomains: input.excludeDomains,

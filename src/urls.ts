@@ -31,9 +31,11 @@ export function normalizeUrlInput(input: { url?: string; urls?: string[] }, maxC
 export function urlsMatch(a: string | undefined, b: string | undefined): boolean {
   if (!a || !b) return false;
   try {
-    if (canonicalWebUrl(a) === canonicalWebUrl(b)) return true;
+    const ca = canonicalWebUrl(a);
+    const cb = canonicalWebUrl(b);
+    if (ca === cb) return true;
     const trimSlash = (s: string) => s.endsWith("/") ? s.slice(0, -1) : s;
-    return trimSlash(canonicalWebUrl(a)) === trimSlash(canonicalWebUrl(b));
+    return trimSlash(ca) === trimSlash(cb);
   } catch {
     return a === b;
   }

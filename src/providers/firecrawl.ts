@@ -1,5 +1,5 @@
 import { asSnippet, mapConcurrent, normalizeUrls, requestJson } from "../http.js";
-import { FETCH_CONCURRENCY } from "../limits.js";
+import { DEFAULT_NUM_RESULTS, FETCH_CONCURRENCY } from "../limits.js";
 import type { FetchInput, FetchProvider, SearchInput, SearchProvider, WebKitConfig } from "../types.js";
 import { requireKey } from "../config.js";
 
@@ -13,7 +13,7 @@ export class FirecrawlProvider implements SearchProvider, FetchProvider {
       method: "POST", headers: this.headers(), signal, timeoutMs: 45000,
       body: JSON.stringify({
         query: input.query,
-        limit: input.numResults ?? 10,
+        limit: input.numResults ?? DEFAULT_NUM_RESULTS,
         location: input.location,
         country: input.country,
         includeDomains: input.includeDomains,

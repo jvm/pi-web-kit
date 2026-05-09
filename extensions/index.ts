@@ -6,8 +6,9 @@ import { resolveConfig } from "../src/config.js";
 import { DEFAULT_FETCH_LIMIT, DEFAULT_NUM_RESULTS, MAX_LIMIT, MAX_NUM_RESULTS, MAX_OFFSET, MAX_QUERY_COUNT, MAX_URL_COUNT, MULTI_FETCH_LIMIT } from "../src/limits.js";
 import { truncateText } from "../src/http.js";
 import { createFetchProvider, createSearchProvider } from "../src/providers/index.js";
+import { mapFetchResults } from "../src/providers/fallback.js";
 import type { FetchProviderName, SearchProviderName, WebFetchResult } from "../src/types.js";
-import { canonicalWebUrl, normalizeUrlInput, urlsMatch } from "../src/urls.js";
+import { canonicalWebUrl, normalizeUrlInput } from "../src/urls.js";
 
 export default function (pi: ExtensionAPI) {
   pi.registerFlag("web-provider-search", {
@@ -176,9 +177,11 @@ export async function fetchWithCache(providerName: FetchProviderName, params: Re
   const refresh = params.refresh === true;
 
   const pages = new Map<string, { page?: CachedPage; cached: boolean; refreshed: boolean; error?: string }>();
+  const cacheKeys = new Map<string, string>();
   const missing: string[] = [];
   for (const url of urls) {
     const cacheKey = buildCacheKey(providerName, url, params, config);
+    cacheKeys.set(url, cacheKey);
     const cached = fetchCache.get(cacheKey);
     if (cached && !refresh) {
       pages.set(url, { page: cached, cached: true, refreshed: false });
@@ -200,7 +203,7 @@ export async function fetchWithCache(providerName: FetchProviderName, params: Re
         onProgress?.({ status: "error", url: requestedUrl, error });
         continue;
       }
-      const cacheKey = buildCacheKey(providerName, requestedUrl, params, config);
+      const cacheKey = cacheKeys.get(requestedUrl)!;
       const page = fetchCache.set(cacheKey, {
         provider: providerName,
         cacheKey,
@@ -224,16 +227,6 @@ export async function fetchWithCache(providerName: FetchProviderName, params: Re
   }) };
 }
 
-function mapFetchResults(requested: string[], fetched: WebFetchResult): Map<string, WebFetchResult["results"][number]> {
-  const out = new Map<string, WebFetchResult["results"][number]>();
-  const remaining = [...(fetched.results ?? [])];
-  for (const url of requested) {
-    const index = remaining.findIndex((item) => urlsMatch(item.url, url));
-    if (index >= 0) out.set(url, remaining.splice(index, 1)[0]);
-  }
-  requested.forEach((url, index) => { if (!out.has(url) && fetched.results?.[index]) out.set(url, fetched.results[index]); });
-  return out;
-}
 
 export function pageSlice(page: CachedPage, offset: number, limit: number, cached: boolean, refreshed: boolean) {
   const total = page.content.length;
@@ -266,7 +259,13 @@ function fetchConfigDefaults(provider: FetchProviderName, config?: any): Record<
 }
 
 function providerScope(provider: FetchProviderName, config?: any): string {
-  const key = provider === "exa" || provider === "exa_mcp" ? config?.apiKeys?.exa : provider === "tinyfish" ? config?.apiKeys?.tinyfish : provider === "firecrawl" ? config?.apiKeys?.firecrawl : undefined;
+  const keyMap: Partial<Record<FetchProviderName, string | undefined>> = {
+    exa: config?.apiKeys?.exa,
+    exa_mcp: config?.apiKeys?.exa,
+    tinyfish: config?.apiKeys?.tinyfish,
+    firecrawl: config?.apiKeys?.firecrawl,
+  };
+  const key = keyMap[provider];
   return key ? `key:${String(key).slice(0, 8)}` : "default";
 }
 
@@ -294,7 +293,7 @@ function markProgressDone(progress: WebProgress, label: string, note?: string) {
   if (!item) return;
   item.status = "done";
   item.note = note;
-  progress.completed = progress.items.filter((i) => i.status === "done" || i.status === "error").length;
+  progress.completed++;
 }
 
 function markProgressError(progress: WebProgress, label: string, error?: string) {
@@ -302,7 +301,7 @@ function markProgressError(progress: WebProgress, label: string, error?: string)
   if (!item) return;
   item.status = "error";
   item.error = error;
-  progress.completed = progress.items.filter((i) => i.status === "done" || i.status === "error").length;
+  progress.completed++;
 }
 
 function emitProgress(onUpdate: ((patch: any) => void) | undefined, progress: WebProgress) {
@@ -355,8 +354,14 @@ function renderProgress(progress: WebProgress, theme: any, spinner: string, expa
   const verb = isSearch ? "Searching web" : progress.total === 1 ? "Fetching page" : "Fetching pages";
   let text = `${isSearch ? "🔎" : "🌐"} ${verb}${progress.total > 1 ? `  ${progressBar(progress.completed, progress.total)} ${progress.completed}/${progress.total}` : "…"}`;
   const visible = expanded ? progress.items : progress.items.slice(0, 6);
+  const iconMap: Record<string, string> = {
+    done: theme.fg("success", "✓"),
+    error: theme.fg("error", "✕"),
+    current: theme.fg("warning", spinner),
+    pending: theme.fg("muted", "·"),
+  };
   for (const item of visible) {
-    const icon = item.status === "done" ? theme.fg("success", "✓") : item.status === "error" ? theme.fg("error", "✕") : item.status === "current" ? theme.fg("warning", spinner) : theme.fg("muted", "·");
+    const icon = iconMap[item.status] ?? theme.fg("muted", "·");
     const note = item.error ? theme.fg("error", ` ${item.error}`) : item.note ? theme.fg("muted", ` ${item.note}`) : "";
     text += `\n   ${icon} ${theme.fg(item.status === "pending" ? "muted" : "accent", quote(truncateMiddle(item.label, 100)))}${note}`;
   }

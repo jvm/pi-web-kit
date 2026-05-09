@@ -6,6 +6,21 @@ This project follows the spirit of [Keep a Changelog](https://keepachangelog.com
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-05-09
+
+### Changed
+
+- Deduplicated `mapFetchResults` between extension and fallback provider; extension now imports the shared implementation.
+- Replaced `existsSync` + `readFileSync` with a single `readFileSync` in a try/catch to eliminate TOCTOU race in config loading.
+- Replaced nested ternary for `requireKey` env-var names with a lookup object.
+- Replaced magic number `10` with `DEFAULT_NUM_RESULTS` in Exa, Exa MCP, and Firecrawl providers; replaced `10` with `MAX_URL_COUNT` in TinyFish.
+- Fixed `urlsMatch` to compute `canonicalWebUrl` once per URL instead of twice.
+- Moved `nextId` JSON-RPC counter from module scope to `ExaMcpProvider` instance to avoid ID conflicts across concurrent instances.
+- Removed unused `_query` parameter from internal `normalizeSearch` in Exa MCP provider.
+- Replaced O(n) completed-count recomputation in progress tracking with O(1) increment.
+- Cached `buildCacheKey` results in `fetchWithCache` to avoid redundant URL parsing per fetched page.
+- Replaced nested ternary chains in `providerScope` and `renderProgress` with lookup objects.
+
 ## [0.1.1] - 2026-05-09
 
 ### Fixed

@@ -62,13 +62,14 @@ function fallbackProviders(config: WebKitConfig): Array<{ name: FetchProviderNam
   return providers;
 }
 
-function mapFetchResults(requested: string[], fetched: WebFetchResult): Map<string, FetchPage> {
+export function mapFetchResults(requested: string[], fetched: WebFetchResult): Map<string, FetchPage> {
   const out = new Map<string, FetchPage>();
   const remaining = [...(fetched.results ?? [])];
   for (const url of requested) {
     const index = remaining.findIndex((item) => urlsMatch(item.url, url));
     if (index >= 0) out.set(url, remaining.splice(index, 1)[0]);
   }
+  // providers may not echo back the canonical URL; fall back to positional match
   requested.forEach((url, index) => { if (!out.has(url) && fetched.results?.[index]) out.set(url, fetched.results[index]); });
   return out;
 }

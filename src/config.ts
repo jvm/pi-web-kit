@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import type { FetchProviderName, SearchProviderName, WebKitConfig } from "./types.js";
@@ -30,7 +30,7 @@ export function resolveConfig(flags: { providerSearch?: unknown; providerFetch?:
   });
   const home = env.HOME ?? homedir();
   for (const path of [join(home, ".pi/agent/pi-web-kit.json"), join(cwd, ".pi-web-kit.json")]) {
-    if (existsSync(path)) cfg = merge(cfg, JSON.parse(readFileSync(path, "utf8")) as PartialConfig);
+    try { cfg = merge(cfg, JSON.parse(readFileSync(path, "utf8")) as PartialConfig); } catch (e: any) { if (e?.code !== "ENOENT") throw e; }
   }
   cfg = merge(cfg, {
     provider_search: flags.providerSearch as SearchProviderName | undefined,
@@ -63,9 +63,11 @@ export function validateFetchProvider(name: string): asserts name is FetchProvid
   if (!FETCH.includes(name as FetchProviderName)) throw new Error(`Unknown fetch provider '${name}'. Expected one of: ${FETCH.join(", ")}.`);
 }
 
+const PROVIDER_ENV_NAMES = { exa: "EXA_API_KEY", tinyfish: "TINYFISH_API_KEY", brave: "BRAVE_SEARCH_API_KEY", firecrawl: "FIRECRAWL_API_KEY" } as const;
+
 export function requireKey(config: WebKitConfig, provider: "exa" | "tinyfish" | "brave" | "firecrawl"): string {
   const key = config.apiKeys[provider];
-  const envName = provider === "exa" ? "EXA_API_KEY" : provider === "tinyfish" ? "TINYFISH_API_KEY" : provider === "brave" ? "BRAVE_SEARCH_API_KEY" : "FIRECRAWL_API_KEY";
+  const envName = PROVIDER_ENV_NAMES[provider];
   if (!key) throw new Error(`${provider} provider requires ${envName} or apiKeys.${provider} in .pi-web-kit.json / ~/.pi/agent/pi-web-kit.json.`);
   return key;
 }

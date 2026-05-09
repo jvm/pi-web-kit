@@ -1,4 +1,5 @@
 import { asSnippet, normalizeUrls, requestJson } from "../http.js";
+import { MAX_URL_COUNT } from "../limits.js";
 import type { FetchInput, FetchProvider, SearchInput, SearchProvider, WebKitConfig } from "../types.js";
 import { requireKey } from "../config.js";
 
@@ -20,7 +21,7 @@ export class TinyFishProvider implements SearchProvider, FetchProvider {
 
   async fetch(input: FetchInput, signal?: AbortSignal) {
     const urls = normalizeUrls(input);
-    if (urls.length > 10) throw new Error("TinyFish fetch supports a maximum of 10 URLs per request.");
+    if (urls.length > MAX_URL_COUNT) throw new Error(`TinyFish fetch supports a maximum of ${MAX_URL_COUNT} URLs per request.`);
     const data = await requestJson<any>("https://api.fetch.tinyfish.ai", {
       method: "POST",
       headers: { "content-type": "application/json", "X-API-Key": this.key },

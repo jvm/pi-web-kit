@@ -1,17 +1,17 @@
 import { asSnippet, fetchWithTimeout, normalizeUrls } from "../http.js";
+import { DEFAULT_NUM_RESULTS } from "../limits.js";
 import { urlsMatch } from "../urls.js";
 import type { FetchInput, FetchProvider, SearchInput, SearchProvider, WebKitConfig } from "../types.js";
 import { applyExaFetchFallbacks } from "./fallback.js";
 
-let nextId = 1;
-
 export class ExaMcpProvider implements SearchProvider, FetchProvider {
   private sessionId?: string;
+  private nextId = 1;
   constructor(private config: WebKitConfig) {}
 
   async search(input: SearchInput, signal?: AbortSignal) {
-    const result = await this.callTool("web_search_exa", { query: input.query, numResults: input.numResults ?? 10 }, signal);
-    return { provider: "exa_mcp" as const, query: input.query, results: normalizeSearch(result, input.query) };
+    const result = await this.callTool("web_search_exa", { query: input.query, numResults: input.numResults ?? DEFAULT_NUM_RESULTS }, signal);
+    return { provider: "exa_mcp" as const, query: input.query, results: normalizeSearch(result) };
   }
 
   async fetch(input: FetchInput, signal?: AbortSignal) {
@@ -44,7 +44,7 @@ export class ExaMcpProvider implements SearchProvider, FetchProvider {
     const headers: Record<string, string> = { "content-type": "application/json", accept: "application/json, text/event-stream" };
     if (this.sessionId) headers["mcp-session-id"] = this.sessionId;
     if (this.config.apiKeys.exa) headers["x-api-key"] = this.config.apiKeys.exa;
-    const body = notification ? { jsonrpc: "2.0", method, params } : { jsonrpc: "2.0", id: nextId++, method, params };
+    const body = notification ? { jsonrpc: "2.0", method, params } : { jsonrpc: "2.0", id: this.nextId++, method, params };
     const res = await fetchWithTimeout("https://mcp.exa.ai/mcp", { method: "POST", headers, body: JSON.stringify(body), signal, timeoutMs: 45_000 });
     const text = await res.text();
     if (!res.ok) throw new Error(`Exa MCP ${method} failed: ${res.status} ${res.statusText}: ${text.slice(0, 1000)}`);
@@ -70,7 +70,7 @@ function textFromContent(result: any): string {
   return typeof content === "string" ? content : JSON.stringify(content);
 }
 
-function normalizeSearch(result: any, _query: string) {
+function normalizeSearch(result: any) {
   const structured = result?.structuredContent ?? result?.result ?? result;
   const list = structured.results ?? structured.data ?? structured.items;
   if (Array.isArray(list)) return list.map((r: any, i: number) => ({ title: r.title, url: r.url, snippet: asSnippet(r.snippet ?? r.text ?? r.summary ?? r.highlights), siteName: r.siteName, position: i + 1 })).filter((r: any) => r.url);
