@@ -98,6 +98,8 @@ Resolution order: defaults < environment variables < global config < project con
 ### Environment variables
 
 ```bash
+PI_OFFLINE=1        # disables install/update telemetry
+PI_TELEMETRY=0      # disables install/update telemetry
 PI_WEB_KIT_PROVIDER_SEARCH=exa_mcp|exa|tinyfish|brave|firecrawl
 PI_WEB_KIT_PROVIDER_FETCH=exa_mcp|exa|tinyfish|markdown_new|firecrawl
 EXA_API_KEY=...

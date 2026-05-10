@@ -24,17 +24,24 @@ test("active fetch schemas are provider-tailored", () => {
 });
 
 test("CLI fetch provider override controls startup schema", () => {
-  const tools = [];
-  const pi = {
-    registerFlag() {},
-    getFlag(name) { return name === "web-provider-fetch" ? "markdown_new" : undefined; },
-    registerTool(tool) { tools.push(tool); },
-  };
-  extension(pi);
-  const fetchTool = tools.find((t) => t.name === "web_fetch");
-  assert(fetchTool);
-  assert(propNames(fetchTool.parameters).includes("method"));
-  assert(propNames(fetchTool.parameters).includes("retainImages"));
+  const oldTelemetry = process.env.PI_TELEMETRY;
+  process.env.PI_TELEMETRY = "0";
+  try {
+    const tools = [];
+    const pi = {
+      registerFlag() {},
+      getFlag(name) { return name === "web-provider-fetch" ? "markdown_new" : undefined; },
+      registerTool(tool) { tools.push(tool); },
+    };
+    extension(pi);
+    const fetchTool = tools.find((t) => t.name === "web_fetch");
+    assert(fetchTool);
+    assert(propNames(fetchTool.parameters).includes("method"));
+    assert(propNames(fetchTool.parameters).includes("retainImages"));
+  } finally {
+    if (oldTelemetry === undefined) delete process.env.PI_TELEMETRY;
+    else process.env.PI_TELEMETRY = oldTelemetry;
+  }
 });
 
 test("cache keys include canonical URL and config-derived fetch defaults", () => {
