@@ -6,6 +6,12 @@ This project follows the spirit of [Keep a Changelog](https://keepachangelog.com
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-05-10
+
+### Fixed
+
+- Suppress install/update telemetry in CI environments, including GitHub Actions.
+
 ## [0.1.3] - 2026-05-10
 
 ### Added

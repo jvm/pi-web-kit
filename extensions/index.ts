@@ -183,6 +183,7 @@ function isTruthyEnvFlag(value: string | undefined): boolean {
 
 function isInstallTelemetryEnabled(): boolean {
   if (isTruthyEnvFlag(process.env.PI_OFFLINE)) return false;
+  if (isTruthyEnvFlag(process.env.CI) || isTruthyEnvFlag(process.env.GITHUB_ACTIONS)) return false;
   if (process.env.PI_TELEMETRY !== undefined) return isTruthyEnvFlag(process.env.PI_TELEMETRY);
   const settings = readJsonFile(join(getAgentDir(), "settings.json")) as { enableInstallTelemetry?: unknown };
   return settings.enableInstallTelemetry !== false;
